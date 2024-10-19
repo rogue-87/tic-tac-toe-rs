@@ -14,6 +14,13 @@ enum CheckResult {
     Contine,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum State {
+    X,
+    O,
+    Empty,
+}
+
 #[derive(Debug)]
 struct Score {
     player: u16,
@@ -23,7 +30,7 @@ struct Score {
 
 #[derive(Debug)]
 pub struct Game {
-    moves_map: Option<[u8; 9]>,
+    moves_map: Option<[State; 9]>,
     score: Score,
 }
 
@@ -41,7 +48,7 @@ impl Game {
 
     pub fn start(&mut self) {
         // Initialize the moves_map with an empty board
-        self.moves_map = Some([0; 9]);
+        self.moves_map = Some([State::Empty; 9]);
 
         loop {
             println!("Choose index(0 to 8):");
@@ -55,7 +62,7 @@ impl Game {
             let number: usize = input.trim().parse().expect("Please enter a valid number");
             println!("You entered: {}", number);
             match self.pick_player(number) {
-                Ok(()) => match self.check(1) {
+                Ok(()) => match self.check(State::X) {
                     CheckResult::Win => {
                         println!("** You win! **");
                         self.increase_score(1);
@@ -83,7 +90,7 @@ impl Game {
                 Err(PickError::MovesMapNotInitialized) => println!("The game has not started!"),
             };
             self.pick_cpu();
-            match self.check(2) {
+            match self.check(State::O) {
                 CheckResult::Win => {
                     println!("** Cpu wins! **");
                     self.increase_score(2);
@@ -113,41 +120,33 @@ impl Game {
     }
 
     fn reset(&mut self) {
-        self.moves_map = Some([0; 9]);
+        self.moves_map = Some([State::Empty; 9]);
     }
 
     fn is_full(&self) -> bool {
         match self.moves_map {
-            // Check if the moves_map is Some and contains a value
-            Some(moves) => {
-                // Iterate over the moves_map and check if all values are non-zero
-                for &v in moves.iter() {
-                    if v == 0 {
-                        return false; // If there's a zero, the board is not full
-                    }
-                }
-                true // If no zeros were found, the board is full
-            }
-            None => false, // If moves_map is None, the board is considered not full
+            Some(moves) => moves.iter().all(|&v| v != State::Empty),
+            None => false,
         }
     }
 
     fn print_info(&self) {
         match &self.moves_map {
             Some(moves) => {
-                for (i, &value) in moves.iter().enumerate() {
-                    // Print the values with formatting (width of 3)
-                    print!("{:3}", value);
-
-                    // Print a newline after every 3 values (to simulate a 3x3 Tic Tac Toe board)
+                for (i, &val) in moves.iter().enumerate() {
+                    let symbol = match val {
+                        State::X => "X",
+                        State::O => "O",
+                        State::Empty => ".",
+                    };
+                    print!("{:3}", symbol);
                     if (i + 1) % 3 == 0 {
-                        println!(); // New line after every row
+                        println!();
                     }
                 }
             }
-            None => println!("No moves yet!"), // Handle the case where the moves_map is None
+            None => println!("No moves yet!"),
         };
-        println!();
         println!("{:?}", &self.score)
     }
 
@@ -160,12 +159,9 @@ impl Game {
             }
 
             if let Some(map) = &mut self.moves_map {
-                match map[index] {
-                    0 => {
-                        map[index] = 2;
-                        break;
-                    }
-                    _ => break,
+                if map[index] == State::Empty {
+                    map[index] = State::O;
+                    break;
                 }
             }
         }
@@ -175,10 +171,9 @@ impl Game {
         match index {
             0..=8 => {
                 if let Some(map) = &mut self.moves_map {
-                    if map[index] == 0 {
-                        // Assuming 0 indicates an empty area
-                        map[index] = 1; // Assuming 1 is the player's marker
-                        Ok(()) // Success
+                    if map[index] == State::Empty {
+                        map[index] = State::X;
+                        Ok(())
                     } else {
                         Err(PickError::AreaOccupied) // Fail, already occupied
                     }
@@ -190,13 +185,13 @@ impl Game {
         }
     }
 
-    fn check(&mut self, turn: u8) -> CheckResult {
+    fn check(&mut self, state: State) -> CheckResult {
         if let Some(map) = self.moves_map {
             let (mut ptr1, mut ptr2, mut ptr3) = (0, 3, 6);
 
             // Scan map from left to right
             for _ in 0..=2 {
-                if map[ptr1] == turn && map[ptr2] == turn && map[ptr3] == turn {
+                if map[ptr1] == state && map[ptr2] == state && map[ptr3] == state {
                     return CheckResult::Win;
                 }
                 ptr1 += 1;
@@ -207,7 +202,7 @@ impl Game {
             // Scan map from top to bottom
             (ptr1, ptr2, ptr3) = (0, 1, 2);
             for _ in 0..=2 {
-                if map[ptr1] == turn && map[ptr2] == turn && map[ptr3] == turn {
+                if map[ptr1] == state && map[ptr2] == state && map[ptr3] == state {
                     return CheckResult::Win;
                 }
                 ptr1 += 3;
@@ -217,11 +212,11 @@ impl Game {
 
             // Scan map diagonally(both sides)
             (ptr1, ptr2, ptr3) = (0, 4, 8);
-            if map[ptr1] == turn && map[ptr2] == turn && map[ptr3] == turn {
+            if map[ptr1] == state && map[ptr2] == state && map[ptr3] == state {
                 return CheckResult::Win;
             }
             (ptr1, ptr2, ptr3) = (2, 4, 6);
-            if map[ptr1] == turn && map[ptr2] == turn && map[ptr3] == turn {
+            if map[ptr1] == state && map[ptr2] == state && map[ptr3] == state {
                 return CheckResult::Win;
             }
 

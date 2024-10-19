@@ -152,16 +152,21 @@ impl Game {
     }
 
     fn pick_cpu(&mut self) {
-        let mut rng = rand::thread_rng();
-        let index: usize = rng.gen_range(0..=8);
-        if self.is_full() {
-            return;
-        }
+        loop {
+            let mut rng = rand::thread_rng();
+            let index: usize = rng.gen_range(0..=8);
+            if self.is_full() {
+                return;
+            }
 
-        if let Some(map) = &mut self.moves_map {
-            match map[index] {
-                0 => map[index] = 2,
-                _ => {}
+            if let Some(map) = &mut self.moves_map {
+                match map[index] {
+                    0 => {
+                        map[index] = 2;
+                        break;
+                    }
+                    _ => break,
+                }
             }
         }
     }
